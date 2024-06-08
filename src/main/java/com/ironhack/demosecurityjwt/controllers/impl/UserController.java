@@ -1,5 +1,6 @@
 package com.ironhack.demosecurityjwt.controllers.impl;
 
+import com.ironhack.demosecurityjwt.controllers.interfaces.UserControllerInterface;
 import com.ironhack.demosecurityjwt.models.User;
 import com.ironhack.demosecurityjwt.services.interfaces.UserServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +14,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api")
-public class UserController {
+public class UserController implements UserControllerInterface {
 
     /**
      * User service for accessing user data

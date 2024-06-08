@@ -1,8 +1,9 @@
-package com.ironhack.demosecurityjwt.filters;
+package com.ironhack.demosecurityjwt.security.filters;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ironhack.demosecurityjwt.dtos.LoginRequest;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +25,7 @@ import java.util.stream.Collectors;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-@Slf4j
+@Slf4j // (Simple Logging Facade for Java) offers logging API which is more professional that simply sout
 public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     private final AuthenticationManager authenticationManager;
 
@@ -47,14 +48,25 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
      */
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
-        String username = request.getParameter("username");
-        String password = request.getParameter("password");
-        log.info("Username is: {}", username);
-        log.info("Password is: {}", password);
-        // Creating an Authentication token with given username and password
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(username, password);
-        // Attempting to authenticate the user with the given credentials
-        return authenticationManager.authenticate(authenticationToken);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            LoginRequest loginRequest = mapper.readValue(request.getInputStream(), LoginRequest.class);
+
+            // Creating an Authentication token with given username and password
+            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                    loginRequest.getUsername(),
+                    loginRequest.getPassword()
+            );
+
+            log.info("Username is: {}", loginRequest.getUsername());
+            log.info("Password is: {}", loginRequest.getPassword());
+
+            // Attempting to authenticate the user with the given credentials
+            return authenticationManager.authenticate(authenticationToken);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -69,10 +81,13 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
      */
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authentication) throws IOException, ServletException {
-        // Cast the authentication principal to User object
+        // Cast the authentication principal to spring security User object
         User user = (User) authentication.getPrincipal();
-        // Creating an HMAC256 encoded JWT with secret key
+
+        // Creating an HMAC256 (Hash-based Message Authentication Code using SHA-512 algorithm)
+        // encoded JWT with secret key
         Algorithm algorithm = Algorithm.HMAC256("secret".getBytes());
+
         // Adding user details and roles to the token
         String access_token = JWT.create()
                 .withSubject(user.getUsername())
@@ -80,11 +95,14 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
                 .withIssuer(request.getRequestURL().toString())
                 .withClaim("roles", user.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()))
                 .sign(algorithm);
+
         // Creating a map with the generated token
         Map<String, String> tokens = new HashMap<>();
         tokens.put("access_token", access_token);
+
         // Setting the response type to application/json
         response.setContentType(APPLICATION_JSON_VALUE);
+
         // Writing the token as response
         new ObjectMapper().writeValue(response.getOutputStream(), tokens);
     }

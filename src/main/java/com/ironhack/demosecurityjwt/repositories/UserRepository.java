@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+
     /**
      * Method to find a User entity by its username field
      *

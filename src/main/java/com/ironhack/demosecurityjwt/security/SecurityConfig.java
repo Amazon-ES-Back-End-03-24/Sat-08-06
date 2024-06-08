@@ -1,7 +1,7 @@
 package com.ironhack.demosecurityjwt.security;
 
-import com.ironhack.demosecurityjwt.filters.CustomAuthenticationFilter;
-import com.ironhack.demosecurityjwt.filters.CustomAuthorizationFilter;
+import com.ironhack.demosecurityjwt.security.filters.CustomAuthenticationFilter;
+import com.ironhack.demosecurityjwt.security.filters.CustomAuthorizationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -25,14 +25,15 @@ import static org.springframework.security.config.http.SessionCreationPolicy.STA
  * sets up the password encoder, and sets up the security filter chain.
  */
 @Configuration
-@EnableWebSecurity
+@EnableWebSecurity // indicates it is a security config class using spring web security
 @RequiredArgsConstructor
 public class SecurityConfig {
+
     // UserDetailsService is an interface provided by Spring Security that defines a way to retrieve user information
     @Autowired
     private UserDetailsService userDetailsService;
 
-    // Autowired instance of the AuthenticationManagerBuilder
+    // Autowired instance of the AuthenticationManagerBuilder (provided by Spring Security)
     @Autowired
     private AuthenticationManagerBuilder authManagerBuilder;
 
@@ -69,20 +70,29 @@ public class SecurityConfig {
     protected SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         // CustomAuthenticationFilter instance created
         CustomAuthenticationFilter customAuthenticationFilter = new CustomAuthenticationFilter(authManagerBuilder.getOrBuild());
+
         // set the URL that the filter should process
         customAuthenticationFilter.setFilterProcessesUrl("/api/login");
-        // disable CSRF protection
+
+        // disable CSRF protection because we are using tokens, not session
         http.csrf().disable();
-        // set the session creation policy to stateless
+
+        // set the session creation policy to stateless, to not maintain sessions in the server
         http.sessionManagement().sessionCreationPolicy(STATELESS);
+
         // set up authorization for different request matchers and user roles
         http.authorizeHttpRequests((requests) -> requests
-                .requestMatchers("/api/login/**").permitAll()
-                .requestMatchers(GET, "/api/users").hasAnyAuthority("ROLE_USER")
+                .requestMatchers("/api/login/**").permitAll() // public endpoint, we could add more if we wanted to
+                // could be deleted .requestMatchers(GET, "/api/users").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                .requestMatchers(GET, "/api/users").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                 .requestMatchers(POST, "/api/users").hasAnyAuthority("ROLE_ADMIN")
-                .anyRequest().authenticated());
+                .requestMatchers(POST, "/api/roles").hasAnyAuthority("ROLE_ADMIN")
+                .requestMatchers(POST, "/api/roles/add-to-user").hasAnyAuthority("ROLE_ADMIN")
+                .anyRequest().authenticated()); // any other endpoints require authentication
+
         // add the custom authentication filter to the http security object
         http.addFilter(customAuthenticationFilter);
+
         // Add the custom authorization filter before the standard authentication filter.
         http.addFilterBefore(new CustomAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
 

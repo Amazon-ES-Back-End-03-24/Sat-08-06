@@ -4,6 +4,7 @@ import com.ironhack.demosecurityjwt.dtos.RoleToUserDTO;
 import com.ironhack.demosecurityjwt.models.Role;
 
 public interface RoleControllerInterface {
+
     /**
      * Save a new role
      *

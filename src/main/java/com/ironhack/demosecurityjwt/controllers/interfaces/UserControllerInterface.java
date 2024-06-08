@@ -8,6 +8,7 @@ import java.util.List;
  * Interface for UserController. Contains methods for handling user related operations
  */
 public interface UserControllerInterface {
+
     /**
      * Retrieves a list of all users
      *
@@ -19,7 +20,6 @@ public interface UserControllerInterface {
      * Saves a new user
      *
      * @param user the user to be saved
-     * @return the saved user
      */
-    User saveUser(User user);
+    void saveUser(User user);
 }
